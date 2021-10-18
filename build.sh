@@ -102,6 +102,17 @@ cmd buildah config \
     --cmd 'crond' \
     "$CONTAINER"
 
+cmd buildah config \
+    --annotation org.opencontainers.image.title="ACME Issue & Renew" \
+    --annotation org.opencontainers.image.description="A container to issue and renew Let's Encrypt SSL certificates using acme-tiny." \
+    --annotation org.opencontainers.image.url="https://github.com/SGSGermany/acme" \
+    --annotation org.opencontainers.image.authors="SGS Serious Gaming & Simulations GmbH" \
+    --annotation org.opencontainers.image.vendor="SGS Serious Gaming & Simulations GmbH" \
+    --annotation org.opencontainers.image.licenses="MIT" \
+    --annotation org.opencontainers.image.base.name="$BASE_IMAGE" \
+    --annotation org.opencontainers.image.base.digest="$(podman image inspect --format '{{.Digest}}' "$BASE_IMAGE")" \
+    "$CONTAINER"
+
 cmd buildah commit "$CONTAINER" "$IMAGE:${TAGS[0]}"
 cmd buildah rm "$CONTAINER"
 
