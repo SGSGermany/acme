@@ -83,9 +83,6 @@ cmd buildah run "$CONTAINER" -- \
 cmd buildah run "$CONTAINER" -- \
     ln -s python3 /usr/bin/python
 
-cmd buildah run "$CONTAINER" -- \
-    ln -s /etc/ssl1.1/openssl.cnf /etc/ssl/openssl.cnf
-
 echo + "rm …/etc/crontabs/root"
 rm "$MOUNT/etc/crontabs/root"
 
