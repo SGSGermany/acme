@@ -1,0 +1,1 @@
+0 0 1 * * acme-renew --all --verbose --retry

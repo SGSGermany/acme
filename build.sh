@@ -21,37 +21,43 @@ ACME_TINY="https://raw.githubusercontent.com/diafygi/acme-tiny/5.0.1/acme_tiny.p
 ISSUE_SCRIPT="https://raw.githubusercontent.com/PhrozenByte/acme/v1.8/src/acme-issue"
 RENEW_SCRIPT="https://raw.githubusercontent.com/PhrozenByte/acme/v1.8/src/acme-renew"
 CONFIG="https://raw.githubusercontent.com/PhrozenByte/acme/v1.8/conf/config.env"
+VERSION="1.8"
 
 set -eu -o pipefail
 export LC_ALL=C
 
-cmd() {
-    echo + "$@"
-    "$@"
-    return $?
-}
+[ -v CI_TOOLS ] && [ "$CI_TOOLS" == "SGSGermany" ] \
+    || { echo "Invalid build environment: Environment variable 'CI_TOOLS' not set or invalid" >&2; exit 1; }
+
+[ -v CI_TOOLS_PATH ] && [ -d "$CI_TOOLS_PATH" ] \
+    || { echo "Invalid build environment: Environment variable 'CI_TOOLS_PATH' not set or invalid" >&2; exit 1; }
+
+source "$CI_TOOLS_PATH/helper/common.sh.inc"
+source "$CI_TOOLS_PATH/helper/container.sh.inc"
+source "$CI_TOOLS_PATH/helper/container-alpine.sh.inc"
 
 BUILD_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-[ -f "$BUILD_DIR/container.env" ] && source "$BUILD_DIR/container.env" \
-    || { echo "ERROR: Container environment not found" >&2; exit 1; }
+source "$BUILD_DIR/container.env"
 
 readarray -t -d' ' TAGS < <(printf '%s' "$TAGS")
 
-echo + "CONTAINER=\"\$(buildah from $BASE_IMAGE)\""
+echo + "CONTAINER=\"\$(buildah from $(quote "$BASE_IMAGE"))\"" >&2
 CONTAINER="$(buildah from "$BASE_IMAGE")"
 
-echo + "MOUNT=\"\$(buildah mount $CONTAINER)\""
+echo + "MOUNT=\"\$(buildah mount $(quote "$CONTAINER"))\"" >&2
 MOUNT="$(buildah mount "$CONTAINER")"
 
-echo + "rsync -v -rl --exclude .gitignore ./src/ …/"
+echo + "rm …/etc/crontabs/root" >&2
+rm "$MOUNT/etc/crontabs/root"
+
+echo + "rsync -v -rl --exclude .gitignore ./src/ …/" >&2
 rsync -v -rl --exclude '.gitignore' "$BUILD_DIR/src/" "$MOUNT/"
 
 cmd buildah run "$CONTAINER" -- \
-    adduser -u 65536 -s "/sbin/nologin" -D -h "/var/local/acme" acme
+    apk update
 
-cmd buildah run "$CONTAINER" -- \
-    apk add --no-cache --virtual .fetch-deps \
-        curl
+pkg_install "$CONTAINER" --virtual .fetch-deps \
+    curl
 
 cmd buildah run "$CONTAINER" -- \
     curl -fsSL -o /usr/local/bin/acme-tiny "$ACME_TINY"
@@ -72,22 +78,19 @@ cmd buildah run "$CONTAINER" -- \
         /usr/local/bin/acme-renew
 
 cmd buildah run "$CONTAINER" -- \
-    apk del --no-network .fetch-deps
+    apk del .fetch-deps
 
-cmd buildah run "$CONTAINER" -- \
-    apk add --virtual .acme-run-deps \
-        python3 \
-        openssl \
-        bash
+pkg_install "$CONTAINER" --virtual .acme-run-deps \
+    python3 \
+    openssl \
+    bash
 
 cmd buildah run "$CONTAINER" -- \
     ln -s python3 /usr/bin/python
 
-echo + "rm …/etc/crontabs/root"
-rm "$MOUNT/etc/crontabs/root"
+user_add "$CONTAINER" acme 65536 "/var/local/acme"
 
-echo + "echo '0 0 1 * * acme-renew --all --verbose --retry' > …/etc/crontabs/acme"
-echo '0 0 1 * * acme-renew --all --verbose --retry' > "$MOUNT/etc/crontabs/acme"
+cleanup "$CONTAINER"
 
 cmd buildah config \
     --volume "/var/local/acme" \
@@ -95,13 +98,15 @@ cmd buildah config \
     "$CONTAINER"
 
 cmd buildah config \
+    --workingdir "/var/local/acme" \
     --entrypoint '[ "/entrypoint.sh" ]' \
-    --cmd 'crond' \
+    --cmd '[ "crond" ]' \
     "$CONTAINER"
 
 cmd buildah config \
     --annotation org.opencontainers.image.title="ACME Issue & Renew" \
     --annotation org.opencontainers.image.description="A container to issue and renew Let's Encrypt SSL certificates using acme-tiny." \
+    --annotation org.opencontainers.image.version="$VERSION" \
     --annotation org.opencontainers.image.url="https://github.com/SGSGermany/acme" \
     --annotation org.opencontainers.image.authors="SGS Serious Gaming & Simulations GmbH" \
     --annotation org.opencontainers.image.vendor="SGS Serious Gaming & Simulations GmbH" \
@@ -110,9 +115,4 @@ cmd buildah config \
     --annotation org.opencontainers.image.base.digest="$(podman image inspect --format '{{.Digest}}' "$BASE_IMAGE")" \
     "$CONTAINER"
 
-cmd buildah commit "$CONTAINER" "$IMAGE:${TAGS[0]}"
-cmd buildah rm "$CONTAINER"
-
-for TAG in "${TAGS[@]:1}"; do
-    cmd buildah tag "$IMAGE:${TAGS[0]}" "$IMAGE:$TAG"
-done
+con_commit "$CONTAINER" "${TAGS[@]}"
