@@ -82,9 +82,6 @@ pkg_install "$CONTAINER" --virtual .acme-run-deps \
     openssl \
     bash
 
-cmd buildah run "$CONTAINER" -- \
-    ln -s python3 /usr/bin/python
-
 user_add "$CONTAINER" acme 65536 "/var/local/acme"
 
 cleanup "$CONTAINER"
