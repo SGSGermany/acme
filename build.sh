@@ -74,8 +74,8 @@ cmd buildah run "$CONTAINER" -- \
         /usr/local/bin/acme-issue \
         /usr/local/bin/acme-renew
 
-cmd buildah run "$CONTAINER" -- \
-    apk del .fetch-deps
+pkg_remove "$CONTAINER" \
+    .fetch-deps
 
 pkg_install "$CONTAINER" --virtual .acme-run-deps \
     python3 \
