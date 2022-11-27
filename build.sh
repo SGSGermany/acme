@@ -53,9 +53,6 @@ rm "$MOUNT/etc/crontabs/root"
 echo + "rsync -v -rl --exclude .gitignore ./src/ …/" >&2
 rsync -v -rl --exclude '.gitignore' "$BUILD_DIR/src/" "$MOUNT/"
 
-cmd buildah run "$CONTAINER" -- \
-    apk update
-
 pkg_install "$CONTAINER" --virtual .fetch-deps \
     curl
 
