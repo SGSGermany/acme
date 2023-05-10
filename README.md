@@ -10,18 +10,19 @@ scripts. All certs and their associated files are stored in `/var/local/acme`,
 the configuration is stored in `/etc/acme`. Both directories are expected to be
 volumes. Please refer to the [script's `README.md`][3] for information about
 these directories and the required config. The container's entrypoint will
-create the necessary files and directories. If there's no `config.env` yet, it
+create the necessary files and directories, so if there's no `config.env`, it
 will create it. You can use the script's env variables `ACME_ACCOUNT_KEY_FILE`,
 `ACME_ACCOUNT_CONTACT`, `ACME_DIRECTORY_URL` and `TLS_KEY_GROUP` to change
-the config.
+the config on-the-fly.
 
 The container runs `crond` by default. The only cronjob runs once a month (on
 the first day of the month at 00:00:00 UTC) and executes `acme-renew --all`.
 To issue new certs or to renew existing certs manually, call `acme-issue` or
-`acme-renew` inside the container. The scripts must run as user `'acme'`, e.g.
+`acme-renew` inside the container, e.g.
 
 ```sh
-podman exec -it --user acme acme acme-issue --force example.com www.example.com
+podman exec -it acme acme-issue --force example.com www.example.com
+podman exec -it acme acme-renew example.com
 ```
 
 [1]: https://letsencrypt.org/
