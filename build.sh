@@ -10,19 +10,6 @@
 # SPDX-License-Identifier: MIT
 # License-Filename: LICENSE
 
-# acme-tiny <https://github.com/diafygi/acme-tiny>
-# tag '5.0.1', commit 1858f68204983d86d3bb8f51463af91301965322
-# dated 2021-09-11 18:38:35 UTC
-ACME_TINY="https://raw.githubusercontent.com/diafygi/acme-tiny/5.0.1/acme_tiny.py"
-
-# acme-issue and acme-renew scripts <https://github.com/PhrozenByte/acme>
-# tag 'v1.8', commit cefb47ada9aebb45c8662768f103517b39c51d2c
-# dated 2021-10-02 17:48:35 UTC
-ISSUE_SCRIPT="https://raw.githubusercontent.com/PhrozenByte/acme/v1.8/src/acme-issue"
-RENEW_SCRIPT="https://raw.githubusercontent.com/PhrozenByte/acme/v1.8/src/acme-renew"
-CONFIG="https://raw.githubusercontent.com/PhrozenByte/acme/v1.8/conf/config.env"
-VERSION="1.8"
-
 set -eu -o pipefail
 export LC_ALL=C
 
@@ -35,6 +22,7 @@ export LC_ALL=C
 source "$CI_TOOLS_PATH/helper/common.sh.inc"
 source "$CI_TOOLS_PATH/helper/container.sh.inc"
 source "$CI_TOOLS_PATH/helper/container-alpine.sh.inc"
+source "$CI_TOOLS_PATH/helper/git.sh.inc"
 
 BUILD_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 source "$BUILD_DIR/container.env"
@@ -53,30 +41,6 @@ rm "$MOUNT/etc/crontabs/root"
 echo + "rsync -v -rl --exclude .gitignore ./src/ …/" >&2
 rsync -v -rl --exclude '.gitignore' "$BUILD_DIR/src/" "$MOUNT/"
 
-pkg_install "$CONTAINER" --virtual .fetch-deps \
-    curl
-
-cmd buildah run "$CONTAINER" -- \
-    curl -fsSL -o /usr/local/bin/acme-tiny "$ACME_TINY"
-
-cmd buildah run "$CONTAINER" -- \
-    curl -fsSL -o /usr/local/bin/acme-issue "$ISSUE_SCRIPT"
-
-cmd buildah run "$CONTAINER" -- \
-    curl -fsSL -o /usr/local/bin/acme-renew "$RENEW_SCRIPT"
-
-cmd buildah run "$CONTAINER" -- \
-    curl -fsSL -o /etc/acme/config.env.dist "$CONFIG"
-
-cmd buildah run "$CONTAINER" -- \
-    chmod 755 \
-        /usr/local/bin/acme-tiny \
-        /usr/local/bin/acme-issue \
-        /usr/local/bin/acme-renew
-
-pkg_remove "$CONTAINER" \
-    .fetch-deps
-
 pkg_install "$CONTAINER" --virtual .acme-run-deps \
     python3 \
     openssl \
@@ -84,6 +48,61 @@ pkg_install "$CONTAINER" --virtual .acme-run-deps \
 
 user_add "$CONTAINER" acme 65536 "/var/local/acme"
 
+# @diafygi's acme-tiny <https://github.com/diafygi/acme-tiny>
+git_clone "$ACME_TINY_GIT_REPO" "$ACME_TINY_GIT_REF" \
+    "$MOUNT/usr/src/acme-tiny" "…/usr/src/acme-tiny"
+
+echo + "ACME_TINY_HASH=\"\$(git -C …/usr/src/acme-tiny rev-parse HEAD)\"" >&2
+ACME_TINY_HASH="$(git -C "$MOUNT/usr/src/acme-tiny" rev-parse HEAD)"
+
+echo + "[ \"\$ACME_TINY_GIT_COMMIT\" == \"\$ACME_TINY_HASH\" ]" >&2
+if [ "$ACME_TINY_GIT_COMMIT" != "$ACME_TINY_HASH" ]; then
+    echo "Failed to verify source code integrity of @diafygi's acme-tiny v$ACME_TINY_VERSION:" \
+        "Expecting Git commit '$ACME_TINY_GIT_COMMIT', got '$ACME_TINY_HASH'" >&2
+    exit 1
+fi
+
+echo + "cp …/usr/src/acme-tiny/acme_tiny.py …/usr/local/bin/acme-tiny" >&2
+cp "$MOUNT/usr/src/acme-tiny/acme_tiny.py" "$MOUNT/usr/local/bin/acme-tiny"
+
+cmd buildah run "$CONTAINER" -- \
+    chmod 755 "/usr/local/bin/acme-tiny"
+
+echo + "rm -rf …/usr/src/acme-tiny" >&2
+rm -rf "$MOUNT/usr/src/acme-tiny"
+
+# @PhrozenByte's acme management scripts <https://github.com/PhrozenByte/acme>
+git_clone "$ACME_MGMT_GIT_REPO" "$ACME_MGMT_GIT_REF" \
+    "$MOUNT/usr/src/acme-mgmt" "…/usr/src/acme-mgmt"
+
+echo + "ACME_MGMT_HASH=\"\$(git -C …/usr/src/acme-mgmt rev-parse HEAD)\"" >&2
+ACME_MGMT_HASH="$(git -C "$MOUNT/usr/src/acme-mgmt" rev-parse HEAD)"
+
+echo + "[ \"\$ACME_MGMT_GIT_COMMIT\" == \"\$ACME_MGMT_HASH\" ]" >&2
+if [ "$ACME_MGMT_GIT_COMMIT" != "$ACME_MGMT_HASH" ]; then
+    echo "Failed to verify source code integrity of @PhrozenByte's acme management scripts v$ACME_MGMT_VERSION:" \
+        "Expecting Git commit '$ACME_MGMT_GIT_COMMIT', got '$ACME_MGMT_HASH'" >&2
+    exit 1
+fi
+
+echo + "cp …/usr/src/acme-mgmt/src/acme-issue …/usr/local/bin/acme-issue" >&2
+cp "$MOUNT/usr/src/acme-mgmt/src/acme-issue" "$MOUNT/usr/local/bin/acme-issue"
+
+echo + "cp …/usr/src/acme-mgmt/src/acme-renew …/usr/local/bin/acme-renew" >&2
+cp "$MOUNT/usr/src/acme-mgmt/src/acme-renew" "$MOUNT/usr/local/bin/acme-renew"
+
+cmd buildah run "$CONTAINER" -- \
+    chmod 755 \
+        "/usr/local/bin/acme-issue" \
+        "/usr/local/bin/acme-renew"
+
+echo + "cp …/usr/src/acme-mgmt/conf/config.env …/etc/acme/config.env.dist" >&2
+cp "$MOUNT/usr/src/acme-mgmt/conf/config.env" "$MOUNT/etc/acme/config.env.dist"
+
+echo + "rm -rf …/usr/src/acme-mgmt" >&2
+rm -rf "$MOUNT/usr/src/acme-mgmt"
+
+# finalize image
 cleanup "$CONTAINER"
 
 cmd buildah config \
@@ -100,7 +119,7 @@ cmd buildah config \
 cmd buildah config \
     --annotation org.opencontainers.image.title="ACME Issue & Renew" \
     --annotation org.opencontainers.image.description="A container to issue and renew Let's Encrypt SSL certificates using acme-tiny." \
-    --annotation org.opencontainers.image.version="$VERSION" \
+    --annotation org.opencontainers.image.version- \
     --annotation org.opencontainers.image.url="https://github.com/SGSGermany/acme" \
     --annotation org.opencontainers.image.authors="SGS Serious Gaming & Simulations GmbH" \
     --annotation org.opencontainers.image.vendor="SGS Serious Gaming & Simulations GmbH" \
