@@ -11,7 +11,7 @@
 # License-Filename: LICENSE
 
 set -eu -o pipefail
-export LC_ALL=C
+export LC_ALL=C.UTF-8
 
 [ -v CI_TOOLS ] && [ "$CI_TOOLS" == "SGSGermany" ] \
     || { echo "Invalid build environment: Environment variable 'CI_TOOLS' not set or invalid" >&2; exit 1; }
@@ -104,6 +104,13 @@ rm -rf "$MOUNT/usr/src/acme-mgmt"
 
 # finalize image
 cleanup "$CONTAINER"
+
+cmd buildah config \
+    --env ACME_TINY_VERSION="$ACME_TINY_VERSION" \
+    --env ACME_TINY_HASH="$ACME_TINY_HASH" \
+    --env ACME_MGMT_VERSION="$ACME_MGMT_VERSION" \
+    --env ACME_MGMT_HASH="$ACME_MGMT_HASH" \
+    "$CONTAINER"
 
 cmd buildah config \
     --volume "/var/local/acme" \

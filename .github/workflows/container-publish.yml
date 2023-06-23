@@ -11,6 +11,10 @@ concurrency: build
 env:
   CI_TOOLS_SETUP: https://raw.githubusercontent.com/SGSGermany/ci-tools/main/setup.sh
 
+defaults:
+  run:
+    shell: bash -eu -o pipefail {0}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -42,8 +46,8 @@ jobs:
 
       - name: Generate container image tags
         run: |
-          TAGS="$("$CI_TOOLS_PATH/containers/generate-image-tags.sh" "${GITHUB_REF:-$GITHUB_SHA}" "$GITHUB_RUN_ID.$GITHUB_RUN_NUMBER")"
-          echo "TAGS=${TAGS:-latest}" | tee -a "$GITHUB_ENV"
+          TAGS="$("$CI_TOOLS_PATH/containers/generate-image-tags.sh" "$GITHUB_REF" "$GITHUB_RUN_ID.$GITHUB_RUN_NUMBER")"
+          echo "TAGS=$TAGS" | tee -a "$GITHUB_ENV"
 
       - name: Check for updates
         run: |
