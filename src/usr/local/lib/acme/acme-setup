@@ -1,0 +1,74 @@
+#!/bin/bash
+# acme
+# A container to issue and renew Let's Encrypt SSL certificates using acme-tiny.
+#
+# Copyright (c) 2021  SGS Serious Gaming & Simulations GmbH
+#
+# This work is licensed under the terms of the MIT license.
+# For a copy, see LICENSE file or <https://opensource.org/licenses/MIT>.
+#
+# SPDX-License-Identifier: MIT
+# License-Filename: LICENSE
+
+set -eu -o pipefail
+export LC_ALL=C
+
+log() {
+    printf "$1\n" "${@:2}" >&2
+}
+
+# create /var/local/acme skeleton, if necessary
+if [ ! -d "/var/local/acme/live" ]; then
+    log "creating directory '/var/local/acme/live'..."
+
+    mkdir "/var/local/acme/live"
+    chown acme:acme "/var/local/acme/live"
+fi
+
+if [ ! -d "/var/local/acme/archive" ]; then
+    log "creating directory '/var/local/acme/archive'..."
+
+    mkdir "/var/local/acme/archive"
+    chown acme:acme "/var/local/acme/archive"
+fi
+
+if [ ! -d "/var/local/acme/challenges" ]; then
+    log "creating directory '/var/local/acme/challenges'..."
+
+    mkdir "/var/local/acme/challenges"
+    chown acme:acme "/var/local/acme/challenges"
+fi
+
+# create account key, if necessary
+if [ -z "${ACME_ACCOUNT_KEY_FILE:-}" ] || [ "$ACME_ACCOUNT_KEY_FILE" == "/etc/acme/account.key" ]; then
+    if [ ! -f "/etc/acme/account.key" ]; then
+        log "creating account key '/etc/acme/account.key'..."
+
+        ( umask 027 && openssl genrsa 4096 > "/etc/acme/account.key" )
+        chmod 640 "/etc/acme/account.key"
+        chown acme:acme "/etc/acme/account.key"
+    fi
+fi
+
+# create acme config file, if necessary
+if [ ! -f "/etc/acme/config.env" ]; then
+    __config_set() {
+        local NAME="$1"
+        local VALUE="$2"
+
+        log "updating runtime config: $NAME=${VALUE@Q}"
+        sed -i "/^#$NAME=/a $NAME=$(sed -e 's/\\/\\\\/g' <<< "${VALUE@Q}")" "/etc/acme/config.env"
+    }
+
+    log "creating config file '/etc/acme/config.env'..."
+
+    cp "/usr/local/share/acme/config.env" "/etc/acme/config.env"
+    chown acme:acme "/etc/acme/config.env"
+
+    [ "${ACME_ACCOUNT_KEY_FILE:-}" != "/etc/acme/account.key" ] || unset ACME_ACCOUNT_KEY_FILE
+
+    [ -z "${ACME_ACCOUNT_KEY_FILE:-}" ] || __config_set ACME_ACCOUNT_KEY_FILE "$ACME_ACCOUNT_KEY_FILE"
+    [ -z "${ACME_ACCOUNT_CONTACT:-}" ] || __config_set ACME_ACCOUNT_CONTACT "$ACME_ACCOUNT_CONTACT"
+    [ -z "${ACME_DIRECTORY_URL:-}" ] || __config_set ACME_DIRECTORY_URL "$ACME_DIRECTORY_URL"
+    [ -z "${TLS_KEY_GROUP:-}" ] || __config_set TLS_KEY_GROUP "$TLS_KEY_GROUP"
+fi

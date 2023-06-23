@@ -96,8 +96,8 @@ cmd buildah run "$CONTAINER" -- \
         "/usr/local/bin/acme-issue" \
         "/usr/local/bin/acme-renew"
 
-echo + "cp …/usr/src/acme-mgmt/conf/config.env …/etc/acme/config.env.dist" >&2
-cp "$MOUNT/usr/src/acme-mgmt/conf/config.env" "$MOUNT/etc/acme/config.env.dist"
+echo + "cp …/usr/src/acme-mgmt/conf/config.env …/usr/local/share/acme/config.env" >&2
+cp "$MOUNT/usr/src/acme-mgmt/conf/config.env" "$MOUNT/usr/local/share/acme/config.env"
 
 echo + "rm -rf …/usr/src/acme-mgmt" >&2
 rm -rf "$MOUNT/usr/src/acme-mgmt"
