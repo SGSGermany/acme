@@ -91,10 +91,14 @@ cp "$MOUNT/usr/src/acme-mgmt/src/acme-issue" "$MOUNT/usr/local/bin/acme-issue"
 echo + "cp …/usr/src/acme-mgmt/src/acme-renew …/usr/local/bin/acme-renew" >&2
 cp "$MOUNT/usr/src/acme-mgmt/src/acme-renew" "$MOUNT/usr/local/bin/acme-renew"
 
+echo + "cp …/usr/src/acme-mgmt/src/acme-check …/usr/local/bin/acme-check" >&2
+cp "$MOUNT/usr/src/acme-mgmt/src/acme-check" "$MOUNT/usr/local/bin/acme-check"
+
 cmd buildah run "$CONTAINER" -- \
     chmod 755 \
         "/usr/local/bin/acme-issue" \
-        "/usr/local/bin/acme-renew"
+        "/usr/local/bin/acme-renew" \
+        "/usr/local/bin/acme-check"
 
 echo + "cp …/usr/src/acme-mgmt/conf/config.env …/usr/local/share/acme/config.env" >&2
 cp "$MOUNT/usr/src/acme-mgmt/conf/config.env" "$MOUNT/usr/local/share/acme/config.env"

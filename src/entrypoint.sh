@@ -12,7 +12,9 @@
 
 set -e
 
-if [ $# -eq 0 ] || [ "$1" == "crond" ] || [ "$1" == "acme-issue" ] || [ "$1" == "acme-renew" ]; then
+if [ $# -eq 0 ] || [ "$1" == "crond" ] \
+    || [ "$1" == "acme-issue" ] || [ "$1" == "acme-renew" ] || [ "$1" == "acme-check" ]
+then
     # runtime setup
     /usr/local/lib/acme/acme-setup
 
@@ -21,7 +23,7 @@ if [ $# -eq 0 ] || [ "$1" == "crond" ] || [ "$1" == "acme-issue" ] || [ "$1" == 
         exec crond -f -l 7 -L /dev/stdout
     fi
 
-    # run acme-issue, or acme-renew
+    # run acme-issue, acme-renew, or acme-check
     exec su -p -s /bin/sh acme -c '"$@"' -- '/bin/sh' "$@"
 fi
 

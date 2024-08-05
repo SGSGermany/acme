@@ -71,4 +71,53 @@ if [ ! -f "/etc/acme/config.env" ]; then
     [ -z "${ACME_ACCOUNT_CONTACT:-}" ] || __config_set ACME_ACCOUNT_CONTACT "$ACME_ACCOUNT_CONTACT"
     [ -z "${ACME_DIRECTORY_URL:-}" ] || __config_set ACME_DIRECTORY_URL "$ACME_DIRECTORY_URL"
     [ -z "${TLS_KEY_GROUP:-}" ] || __config_set TLS_KEY_GROUP "$TLS_KEY_GROUP"
+    [ -z "${FP_REVOCATION_LIST:-}" ] || __config_set FP_REVOCATION_LIST "$FP_REVOCATION_LIST"
+fi
+
+# create crontab file, if necessary
+if [ ! -f "/etc/crontabs/acme" ]; then
+    __is_cron_valid() {
+        [ -n "$1" ] && [[ "$1 " =~ ^(((\d+|\*)(/\d+)?|\d+-\d+)(,((\d+|\*)(/\d+)?|\d+-\d+))* ){5}$ ]]
+    }
+
+    __crontabs() {
+        local HASH="$(md5sum - <<< "$1")"
+        local MONTHLY_CRON="$2" MONTHLY_CMD="$3"
+        local DAILY_CRON="$4" DAILY_CMD="$5"
+
+        # TIME represents the `n`th minute of the month (e.g. 12,345 is the 9th day at 13:45)
+        # since the cronjob wouldn't run in February otherwise, we accept the 28th day max,
+        # thus we perform an euclidean division by 28 days * 24 hours * 60 minutes = 40,320
+        local TIME=$(( 0x${HASH:0:14} % 40320 ))
+
+        # DAILY_TIME_OFFSET represents a `n` minute offset from TIME's time of day
+        # the daily cronjob shall run between 00:30 and 23:30 hours later than the monthly cronjob,
+        # thus we perform an euclidean division by 24 hours * 60 minutes - 2 * 30 minutes + 1 = 1,381
+        # yielding some value between 00:00 and 23:00 hours, thus adding another 30 minutes
+        local DAILY_TIME_OFFSET=$(( 0x${HASH:16:14} % 1381 + 30 ))
+
+        if ! __is_cron_valid "$MONTHLY_CRON"; then
+            local MONTHLY_DAY=$(( TIME / 1440 + 1 ))
+            local MONTHLY_HOUR=$(( TIME % 1440 / 60 ))
+            local MONTHLY_MINUTE=$(( TIME % 1440 % 60 ))
+            MONTHLY_CRON="$(printf '%d %d %d * *' $MONTHLY_MINUTE $MONTHLY_HOUR $MONTHLY_DAY)"
+        fi
+
+        if ! __is_cron_valid "$DAILY_CRON"; then
+            local DAILY_TIME=$(( ( TIME % 1440 + DAILY_TIME_OFFSET ) % 1440 ))
+            local DAILY_HOUR=$(( DAILY_TIME / 60 ))
+            local DAILY_MINUTE=$(( DAILY_TIME % 60 ))
+            DAILY_CRON="$(printf '%d %d * * *' $DAILY_MINUTE $DAILY_HOUR)"
+        fi
+
+        printf '%s %s\n' "$MONTHLY_CRON" "$MONTHLY_CMD"
+        printf '%s %s\n' "$DAILY_CRON" "$DAILY_CMD"
+    }
+
+    log "creating crontab file '/etc/crontabs/acme'..."
+
+    __crontabs "$(ls -1 "/var/local/acme/live")" \
+        "${CRON_RENEW:-}" "acme-renew --all --retry --clean --verbose" \
+        "${CRON_CHECK:-}" "acme-check --all --renew --retry-renew --verbose" \
+        > "/etc/crontabs/acme"
 fi
