@@ -91,10 +91,10 @@ if [ ! -f "/etc/crontabs/acme" ]; then
         local TIME=$(( 0x${HASH:0:14} % 40320 ))
 
         # DAILY_TIME_OFFSET represents a `n` minute offset from TIME's time of day
-        # the daily cronjob shall run between 00:30 and 23:30 hours later than the monthly cronjob,
-        # thus we perform an euclidean division by 24 hours * 60 minutes - 2 * 30 minutes + 1 = 1,381
-        # yielding some value between 00:00 and 23:00 hours, thus adding another 30 minutes
-        local DAILY_TIME_OFFSET=$(( 0x${HASH:16:14} % 1381 + 30 ))
+        # the daily cronjob shall run between 00:30 and 23:29 hours later than the monthly cronjob,
+        # thus we perform an euclidean division by 24 hours * 60 minutes - 2 * 30 minutes = 1,380
+        # yielding some value between 00:00 and 22:59 hours, thus adding another 30 minutes
+        local DAILY_TIME_OFFSET=$(( 0x${HASH:16:14} % 1380 + 30 ))
 
         if ! __is_cron_valid "$MONTHLY_CRON"; then
             local MONTHLY_DAY=$(( TIME / 1440 + 1 ))
