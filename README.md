@@ -20,17 +20,17 @@ to renew all certificates once per month, and `acme-check --all` daily to check
 validity of all certificates (especially whether they might have been revoked).
 The cronjobs will choose a random execution time automatically; an algorithm
 ensures that the execution times don't change unless you add/remove domains.
-You might passt the `CRON_RENEW` and `CRON_CHECK` environment variables to
-overwrite the schedule (pass e.g. `CRON_RENEW='23 4 3 * *'` to run `acme-renew`
+You might pass the `CRON_RENEW` and `CRON_CHECK` environment variables to
+adjust the schedule (pass e.g. `CRON_RENEW='23 4 3 * *'` to run `acme-renew`
 on the 3rd day of the month at 04:23 o'clock).
 
 To issue new certs, renew existing ones, or to check certs manually, call
 `acme-issue`, `acme-renew`, or `acme-check` inside the container, e.g.
 
 ```sh
-podman exec -it acme acme-issue --force example.com www.example.com
-podman exec -it acme acme-renew example.com
-podman exec -it acme acme-check --all
+podman exec -it --user acme acme acme-issue --force example.com www.example.com
+podman exec -it --user acme acme acme-renew example.com
+podman exec -it --user acme acme acme-check --all
 ```
 
 [1]: https://letsencrypt.org/
