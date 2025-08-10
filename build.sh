@@ -44,6 +44,7 @@ rsync -v -rl --exclude '.gitignore' "$BUILD_DIR/src/" "$MOUNT/"
 pkg_install "$CONTAINER" --virtual .acme-run-deps \
     python3 \
     openssl \
+    curl \
     bash
 
 user_add "$CONTAINER" acme 65536 "/var/local/acme"

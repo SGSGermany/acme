@@ -117,7 +117,7 @@ if [ ! -f "/etc/crontabs/acme" ]; then
     log "creating crontab file '/etc/crontabs/acme'..."
 
     __crontabs "$(ls -1 "/var/local/acme/live")" \
-        "${CRON_RENEW:-}" "acme-renew --all --retry --clean --verbose" \
-        "${CRON_CHECK:-}" "acme-check --all --renew --retry-renew --verbose" \
+        "${CRON_RENEW:-}" "acme-renew --all --retry --retry --clean --verbose" \
+        "${CRON_CHECK:-}" "acme-check --all --retry --retry --renew --retry-renew --retry-renew --verbose" \
         > "/etc/crontabs/acme"
 fi
