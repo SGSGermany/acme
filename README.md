@@ -9,11 +9,13 @@ This container is basically just an [Alpine][5]-based installation of these
 scripts. All certs and their associated files are stored in `/var/local/acme`,
 the configuration is stored in `/etc/acme`. Both directories are expected to be
 volumes. Please refer to the [script's `README.md`][3] for information about
-these directories and the required config. The container's entrypoint will
-create the necessary files and directories, so if there's no `config.env`, it
-will create it. You can use the script's env variables `ACME_ACCOUNT_KEY_FILE`,
-`ACME_ACCOUNT_CONTACT`, `ACME_DIRECTORY_URL`, `TLS_KEY_GROUP` and
-`FP_REVOCATION_LIST` to change the config on-the-fly.
+these directories and the required config.
+
+On the container's first run the entrypoint script will create the necessary
+files and directories; this also includes `/etc/acme/config.env`. The config
+file is populated with values of the env variables `ACME_ACCOUNT_KEY_FILE`,
+`ACME_ACCOUNT_CONTACT`, `ACME_DIRECTORY_URL`, `TLS_KEY_GROUP`, and
+`FP_REVOCATION_LIST`. `FQDN_GROUPS` isn't supported at the moment.
 
 The container runs `crond` by default. It runs two cronjobs, `acme-renew --all`
 to renew all certificates once per month, and `acme-check --all` daily to check
