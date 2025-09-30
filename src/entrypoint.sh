@@ -18,6 +18,10 @@ then
     # runtime setup
     /usr/local/lib/acme/acme-setup
 
+    # unset env variables, they were already consumed by `acme-setup` to create a `config.env`
+    unset ACME_ACCOUNT_KEY_FILE ACME_ACCOUNT_CONTACT ACME_DIRECTORY_URL \
+        TLS_KEY_GROUP FP_REVOCATION_LIST
+
     # run crond
     if [ $# -eq 0 ] || [ "$1" == "crond" ]; then
         exec crond -f -l 7 -L /dev/stdout
