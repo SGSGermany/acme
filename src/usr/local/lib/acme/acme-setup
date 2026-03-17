@@ -94,7 +94,7 @@ if [ ! -f "/etc/crontabs/acme" ]; then
         # thus we perform an euclidean division by 12 (months)
         local TIME_MONTH=$(( 0x${HASH:14:4} % 12 + 1 ))
 
-        # MULTI_JOB_OFFSET is used to offset the execution time ob multiple cronjobs
+        # MULTI_JOB_OFFSET is used to offset the execution time of multiple cronjobs
         # all cronjobs shall run between 10 and 20 minutes after each other,
         # thus we perform an euclidean division by 10 minutes and add another 10 minutes
         # we use Bash's pseudo random number generator and seed it by an incrementing
