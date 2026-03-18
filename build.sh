@@ -133,7 +133,6 @@ cmd buildah config \
 cmd buildah config \
     --annotation org.opencontainers.image.title="ACME Issue & Renew" \
     --annotation org.opencontainers.image.description="A container to issue and renew Let's Encrypt SSL certificates using acme-tiny." \
-    --annotation org.opencontainers.image.version- \
     --annotation org.opencontainers.image.url="https://github.com/SGSGermany/acme" \
     --annotation org.opencontainers.image.authors="SGS Serious Gaming & Simulations GmbH" \
     --annotation org.opencontainers.image.vendor="SGS Serious Gaming & Simulations GmbH" \
